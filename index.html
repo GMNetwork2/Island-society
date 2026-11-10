@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="ur">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0b1722">
+<title>Island Society — 3D Multiplayer Builder</title>
+<style>
+:root{--bg:#0b1722;--panel:#122333;--panel2:#1a3042;--line:#29465b;--text:#edf6fb;--muted:#9bb2c2;--mint:#62e0b2;--gold:#f3c66d;--danger:#ff8a8a}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,sans-serif}
+#scene{position:absolute;inset:0}canvas{display:block}
+.top{position:absolute;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;pointer-events:none}
+.brand,.status,.panel,.toast{background:#102131eF;border:1px solid #355268;border-radius:15px;box-shadow:0 12px 34px #0005;backdrop-filter:blur(12px)}
+.brand{padding:10px 14px;pointer-events:auto}.brand b{font-size:15px;letter-spacing:.4px}.brand small{display:block;color:var(--muted);font-size:11px;margin-top:2px}
+.status{padding:9px 12px;display:flex;gap:12px;align-items:center;font-size:12px;pointer-events:auto}.dot{width:8px;height:8px;border-radius:50%;display:inline-block;background:#e4b45a;margin-right:5px}.dot.on{background:#62e0b2}
+.panel{position:absolute;left:12px;top:95px;width:min(270px,calc(100vw - 24px));padding:13px;max-height:calc(100vh - 190px);overflow:auto}
+.panel h3{font-size:13px;margin:0 0 10px;color:#d8e8f1}.section{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+button,input{font:inherit}button{border:1px solid #35566c;border-radius:10px;background:#1a3448;color:var(--text);padding:9px 8px;font-size:12px;cursor:pointer;transition:.15s}
+button:hover{border-color:var(--mint);background:#23465a}button.active{background:#1b5b50;border-color:var(--mint);color:#fff}button:disabled{opacity:.45;cursor:not-allowed}
+.tool{display:flex;align-items:center;gap:7px;text-align:left}.tool span{font-size:18px}.tool small{display:block;color:var(--muted);font-size:10px}
+.row{display:flex;gap:7px;align-items:center}.row>*{min-width:0;flex:1}
+input{width:100%;background:#0b1a27;border:1px solid #355268;border-radius:9px;color:white;padding:9px;font-size:12px;outline:none}
+.hint{font-size:10px;color:var(--muted);line-height:1.5;margin:8px 1px 0}
+.bottom{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:7px;padding:7px;background:#102131eF;border:1px solid #355268;border-radius:14px;max-width:calc(100vw - 20px)}
+.bottom button{white-space:nowrap}.toast{position:absolute;bottom:75px;left:50%;transform:translateX(-50%);padding:10px 14px;font-size:12px;display:none;max-width:90vw;text-align:center}
+.modal{position:absolute;inset:0;background:#0009;display:grid;place-items:center;padding:16px}
+.dialog{width:min(390px,100%);background:#102131;border:1px solid #426078;border-radius:18px;padding:20px;box-shadow:0 20px 70px #0009}
+.dialog h2{margin:0 0 7px;font-size:20px}.dialog p{color:var(--muted);font-size:12px;line-height:1.5}.dialog input{margin:6px 0 10px}.dialog button{width:100%;margin-top:7px;padding:11px}
+#help{position:absolute;right:12px;bottom:75px;color:#d8e8f1;background:#102131dc;border:1px solid #355268;border-radius:12px;padding:9px 11px;font-size:10px;max-width:210px;line-height:1.5}
+#help b{color:var(--mint)}
+@media(max-width:650px){.panel{top:auto;bottom:65px;left:8px;width:190px;max-height:42vh;padding:10px}.top{top:8px;left:8px;right:8px}.brand{padding:8px 10px}.status{gap:7px;padding:8px;font-size:10px}.bottom{bottom:8px;gap:4px;padding:5px}.bottom button{padding:8px 7px;font-size:10px}.tool{padding:7px 5px}.tool span{font-size:15px}#help{display:none}}
+</style>
+</head>
+<body>
+<div id="scene"></div>
+<div class="top">
+  <div class="brand"><b>🏝️ ISLAND SOCIETY</b><small>3D Online City Builder · Prototype 0.1</small></div>
+  <div class="status"><span><i class="dot" id="netDot"></i><span id="netText">Offline demo</span></span><span>👥 <b id="playerCount">1</b></span><span>💰 <b id="cash">12,000</b></span></div>
+</div>
+<aside class="panel">
+  <h3>🏗️ تعمیرات اور اشیاء</h3>
+  <div class="grid" id="tools">
+    <button class="tool active" data-kind="house"><span>🏠</span><div>گھر<small>$500</small></div></button>
+    <button class="tool" data-kind="villa"><span>🏡</span><div>ولا<small>$1,200</small></div></button>
+    <button class="tool" data-kind="tower"><span>🏢</span><div>ٹاور<small>$2,500</small></div></button>
+    <button class="tool" data-kind="shop"><span>🏬</span><div>دکان<small>$900</small></div></button>
+    <button class="tool" data-kind="park"><span>🌳</span><div>پارک<small>$350</small></div></button>
+    <button class="tool" data-kind="road"><span>🛣️</span><div>سڑک<small>$100</small></div></button>
+  </div>
+  <div class="section">
+    <h3>🌴 جزیرہ</h3>
+    <div class="grid">
+      <button id="rotate">⟳ کیمرہ گھمائیں</button>
+      <button id="resetView">◎ منظر ری سیٹ</button>
+      <button id="deleteMode">🗑️ ہٹائیں</button>
+      <button id="saveNow">☁️ محفوظ کریں</button>
+    </div>
+    <p class="hint">عمارت منتخب کریں، پھر جزیرے کی خالی جگہ پر ٹیپ/کلک کریں۔ ماؤس سے گھمائیں، اسکرول سے زوم کریں۔ موبائل پر ایک انگلی سے گھمائیں اور دو انگلیوں سے زوم کریں۔</p>
+  </div>
+  <div class="section">
+    <h3>🌐 آن لائن دنیا</h3>
+    <div class="row"><input id="worldName" value="My Island" maxlength="24" aria-label="World name"><button id="rename">نام رکھیں</button></div>
+    <p class="hint" id="syncInfo">Demo mode: Supabase keys لگانے کے بعد دنیا آن لائن محفوظ ہوگی۔</p>
+  </div>
+</aside>
+<div class="bottom">
+  <button id="zoomIn">＋ زوم</button><button id="zoomOut">－ زوم</button><button id="dayNight">🌙 رات</button><button id="share">🔗 دعوت</button>
+</div>
+<div id="help"><b>کھیلنے کا طریقہ</b><br>1) عمارت منتخب کریں<br>2) زمین پر جگہ منتخب کریں<br>3) اپنی سوسائٹی بنائیں<br>4) آن لائن دوستوں کے ساتھ کھیلنے کے لیے Supabase سیٹ کریں</div>
+<div class="toast" id="toast"></div>
+<div class="modal" id="welcome">
+  <div class="dialog">
+    <h2>🏝️ اپنی سوسائٹی بنائیں</h2>
+    <p>خوش آمدید! یہ 3D جزیرے کا playable prototype ہے۔ آپ ابھی آف لائن تعمیر شروع کر سکتے ہیں۔ Multiplayer اور cloud save کے لیے نیچے Supabase کی معلومات درج کریں۔</p>
+    <input id="playerName" placeholder="آپ کا نام (مثلاً Hamid)" maxlength="24">
+    <input id="supabaseUrl" placeholder="Supabase Project URL (اختیاری)">
+    <input id="supabaseKey" placeholder="Supabase anon / publishable key (اختیاری)">
+    <button id="start">گیم شروع کریں</button>
+    <button id="skip" style="background:transparent">صرف آف لائن ڈیمو کھیلیں</button>
+    <p style="font-size:10px">اہم: یہاں صرف Supabase کا public anon/publishable key استعمال کریں، service_role key کبھی نہ ڈالیں۔</p>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(() => {
+'use strict';
+const $=id=>document.getElementById(id);
+const COST={house:500,villa:1200,tower:2500,shop:900,park:350,road:100};
+const COLORS={house:0xe8b77a,villa:0xf0d6a5,tower:0x8cb9ce,shop:0xd9a16e,park:0x4a9b65,road:0x424d57};
+let scene,camera,renderer,controlsLike={drag:false,lastX:0,lastY:0,pointer:false},raycaster,ground,objects=[],selected='house',deleteMode=false,cash=12000,night=false,angle=0,zoom=35;
+let supabase=null,user=null,worldId='00000000-0000-4000-8000-000000000001',channel=null,knownIds=new Set(),playerName='Player',syncReady=false;
+const container=$('scene');
+function toast(s){const t=$('toast');t.textContent=s;t.style.display='block';clearTimeout(toast.timer);toast.timer=setTimeout(()=>t.style.display='none',2600)}
+function updateHud(){$('cash').textContent=cash.toLocaleString();$('playerCount').textContent=syncReady?'1+':'1'}
+function init3D(){
+ scene=new THREE.Scene();scene.background=new THREE.Color(0x9ccbd8);scene.fog=new THREE.Fog(0x9ccbd8,70,150);
+ camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.1,300);camera.position.set(27,27,32);
+ renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;container.appendChild(renderer.domElement);
+ scene.add(new THREE.HemisphereLight(0xdaf4ff,0x54704d,1.15));
+ const sun=new THREE.DirectionalLight(0xfff0d5,1.2);sun.position.set(-25,40,20);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-40;sun.shadow.camera.right=40;sun.shadow.camera.top=40;sun.shadow.camera.bottom=-40;scene.add(sun);
+ // Ocean
+ const ocean=new THREE.Mesh(new THREE.PlaneGeometry(300,300),new THREE.MeshPhongMaterial({color:0x368cae,shininess:90}));ocean.rotation.x=-Math.PI/2;ocean.position.y=-1.35;scene.add(ocean);
+ // Island base: layered flattened cylinders
+ const base=new THREE.Mesh(new THREE.CylinderGeometry(19,21,2.3,64),new THREE.MeshStandardMaterial({color:0x9b784d,roughness:1}));base.position.y=-.45;base.receiveShadow=true;base.castShadow=true;scene.add(base);
+ const sand=new THREE.Mesh(new THREE.CylinderGeometry(18.8,19.4,.28,64),new THREE.MeshStandardMaterial({color:0xe7d29a}));sand.position.y=.72;scene.add(sand);
+ ground=new THREE.Mesh(new THREE.CylinderGeometry(17.9,18.4,.35,64),new THREE.MeshStandardMaterial({color:0x6eaa61,roughness:1}));ground.position.y=.91;ground.receiveShadow=true;ground.userData.isGround=true;scene.add(ground);
+ // small hills and palm trees
+ for(let i=0;i<7;i++){let a=i*Math.PI*2/7+.2,r=12.8;let hill=new THREE.Mesh(new THREE.SphereGeometry(2.3,20,14),new THREE.MeshStandardMaterial({color:i%2?0x6b9e58:0x7eaa62}));hill.scale.y=.42;hill.position.set(Math.cos(a)*r,1.25,Math.sin(a)*r);scene.add(hill)}
+ for(let i=0;i<18;i++){let a=i*2.399,r=15.4+(i%3)*.45,x=Math.cos(a)*r,z=Math.sin(a)*r;makePalm(x,z)}
+ // shore rocks
+ for(let i=0;i<35;i++){let a=i*Math.PI*2/35,r=19.3;let rock=new THREE.Mesh(new THREE.DodecahedronGeometry(.35,0),new THREE.MeshStandardMaterial({color:0xb5a47c}));rock.position.set(Math.cos(a)*r,-.7,Math.sin(a)*r);rock.scale.y=.7;scene.add(rock)}
+ raycaster=new THREE.Raycaster();renderer.domElement.addEventListener('pointerdown',pointerDown);renderer.domElement.addEventListener('pointermove',pointerMove);renderer.domElement.addEventListener('wheel',e=>{zoom=Math.max(18,Math.min(65,zoom+e.deltaY*.025));positionCamera()},{passive:true});
+ positionCamera();window.addEventListener('resize',resize);animate();
+}
+function makePalm(x,z){const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.13,.23,2.7,7),new THREE.MeshStandardMaterial({color:0x8b5b35}));trunk.position.set(x,2.15,z);trunk.rotation.z=(Math.random()-.5)*.16;trunk.castShadow=true;scene.add(trunk);for(let j=0;j<6;j++){let leaf=new THREE.Mesh(new THREE.ConeGeometry(.28,2.5,5),new THREE.MeshStandardMaterial({color:j%2?0x267b4a:0x368e52}));leaf.position.set(x+Math.cos(j*Math.PI/3)*.8,3.45,z+Math.sin(j*Math.PI/3)*.8);leaf.rotation.z=Math.PI/2;leaf.rotation.y=j*Math.PI/3;leaf.castShadow=true;scene.add(leaf)}}
+function positionCamera(){camera.position.set(Math.cos(angle)*zoom*.9,zoom*.72,Math.sin(angle)*zoom*.9);camera.lookAt(0,0,0)}
+function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)}
+function animate(){requestAnimationFrame(animate);renderer.render(scene,camera)}
+function pointerDown(e){if(e.button!==undefined&&e.button!==0)return;controlsLike.drag=true;controlsLike.lastX=e.clientX;controlsLike.lastY=e.clientY;controlsLike.moved=false;renderer.domElement.setPointerCapture?.(e.pointerId)}
+function pointerMove(e){if(!controlsLike.drag)return;let dx=e.clientX-controlsLike.lastX,dy=e.clientY-controlsLike.lastY;if(Math.abs(dx)+Math.abs(dy)>4)controlsLike.moved=true;if(controlsLike.moved){angle-=dx*.006;zoom=Math.max(18,Math.min(65,zoom+dy*.045));positionCamera()}controlsLike.lastX=e.clientX;controlsLike.lastY=e.clientY}
+rendererSafeClick();
+function rendererSafeClick(){document.addEventListener('pointerup',e=>{if(!controlsLike.drag)return;const moved=controlsLike.moved;controlsLike.drag=false;if(!moved&&renderer&&e.target===renderer.domElement)placeAt(e.clientX,e.clientY)})}
+function placeAt(x,y){const rect=renderer.domElement.getBoundingClientRect();const p=new THREE.Vector2((x-rect.left)/rect.width*2-1,-((y-rect.top)/rect.height)*2+1);raycaster.setFromCamera(p,camera);const hits=raycaster.intersectObject(ground);if(!hits.length)return;const pt=hits[0].point;if(Math.hypot(pt.x,pt.z)>17.1){toast('جزیرے کے کنارے سے تھوڑا اندر جگہ منتخب کریں');return}
+ if(deleteMode){const nearest=objects.map(o=>({o,d:o.position.distanceTo(new THREE.Vector3(pt.x,1,pt.z))})).sort((a,b)=>a.d-b.d)[0];if(nearest&&nearest.d<3.2){removeObject(nearest.o,true)}else toast('قریب کوئی عمارت نہیں');return}
+ const cost=COST[selected];if(cash<cost){toast('آپ کے پاس کافی رقم نہیں ہے');return}
+ const gx=Math.round(pt.x/2)*2,gz=Math.round(pt.z/2)*2;if(Math.hypot(gx,gz)>16.8){toast('یہ جگہ جزیرے کے باہر ہے');return}
+ if(objects.some(o=>o.position.distanceTo(new THREE.Vector3(gx,1,gz))<2.4)){toast('یہ جگہ پہلے سے استعمال ہو رہی ہے');return}
+ const obj=makeBuilding(selected,gx,gz);objects.push(obj);cash-=cost;updateHud();persistObject(obj);toast('تعمیر مکمل! '+cost.toLocaleString()+' coins خرچ ہوئے');
+}
+function makeBuilding(kind,x,z,id=null,owner=playerName){
+ let group=new THREE.Group();group.position.set(x,1.12,z);group.userData={kind,id:id||crypto.randomUUID?.()||String(Date.now()+Math.random()),owner};
+ const mat=c=>new THREE.MeshStandardMaterial({color:c,roughness:.82});
+ if(kind==='road'){let slab=new THREE.Mesh(new THREE.BoxGeometry(2.7,.12,2.7),mat(0x4a535b));slab.position.y=.04;group.add(slab);let stripe=new THREE.Mesh(new THREE.BoxGeometry(.12,.025,2.2),mat(0xe6d28b));stripe.position.y=.11;group.add(stripe)}
+ else if(kind==='park'){let lawn=new THREE.Mesh(new THREE.BoxGeometry(2.5,.18,2.5),mat(0x4e9a5a));lawn.position.y=.08;group.add(lawn);for(let i=0;i<3;i++){let t=new THREE.Mesh(new THREE.CylinderGeometry(.09,.14,.8,7),mat(0x80502d));t.position.set(-.7+i*.7,.55,(i%2)*.55-.25);group.add(t);let crown=new THREE.Mesh(new THREE.SphereGeometry(.48,10,8),mat(0x287a48));crown.position.set(-.7+i*.7,1.15,(i%2)*.55-.25);group.add(crown)}}
+ else {let w=kind==='tower'?1.7:1.8,d=kind==='tower'?1.7:1.8,h=kind==='tower'?6.8:kind==='villa'?2.6:kind==='shop'?2.5:2.2;let baseMat=mat(COLORS[kind]);let body=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),baseMat);body.position.y=h/2;body.castShadow=true;body.receiveShadow=true;group.add(body);
+ if(kind==='house'||kind==='villa'){let roof=new THREE.Mesh(new THREE.ConeGeometry(1.45,.9,4),mat(kind==='villa'?0x9c5546:0x9b4d3f));roof.position.y=h+.42;roof.rotation.y=Math.PI/4;roof.castShadow=true;group.add(roof)}
+ if(kind==='tower'){let roof=new THREE.Mesh(new THREE.BoxGeometry(1.85,.25,1.85),mat(0x526c7d));roof.position.y=h+.12;group.add(roof)}
+ if(kind==='shop'){let awning=new THREE.Mesh(new THREE.BoxGeometry(2,.35,1.95),mat(0x4b9d91));awning.position.set(0,h*.72,.12);group.add(awning)}
+ // front windows
+ for(let yy=.65;yy<h-.3;yy+=kind==='tower'?1.05:1.05){for(let xx of [-.48,.48]){let win=new THREE.Mesh(new THREE.BoxGeometry(.34,.42,.035),mat(0x9ed8e8));win.position.set(xx,yy,d/2+.02);group.add(win)}}
+ let door=new THREE.Mesh(new THREE.BoxGeometry(.38,.85,.06),mat(0x68452e));door.position.set(0,.45,d/2+.045);group.add(door)}
+ group.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});scene.add(group);return group;
+}
+function removeObject(obj,save){scene.remove(obj);objects=objects.filter(o=>o!==obj);if(save)deleteRemote(obj.userData.id);toast('عمارت ہٹا دی گئی')}
+function setTool(kind){selected=kind;deleteMode=false;$('deleteMode').classList.remove('active');document.querySelectorAll('[data-kind]').forEach(b=>b.classList.toggle('active',b.dataset.kind===kind))}
+document.querySelectorAll('[data-kind]').forEach(b=>b.addEventListener('click',()=>setTool(b.dataset.kind)));
+$('deleteMode').onclick=()=>{deleteMode=!deleteMode;$('deleteMode').classList.toggle('active',deleteMode);toast(deleteMode?'ہٹانے کے لیے عمارت پر کلک کریں':'تعمیر کا موڈ')};
+$('rotate').onclick=()=>{angle+=Math.PI/4;positionCamera()};$('resetView').onclick=()=>{angle=.7;zoom=35;positionCamera()};
+$('zoomIn').onclick=()=>{zoom=Math.max(18,zoom-4);positionCamera()};$('zoomOut').onclick=()=>{zoom=Math.min(65,zoom+4);positionCamera()};
+$('dayNight').onclick=()=>{night=!night;scene.background=new THREE.Color(night?0x101b39:0x9ccbd8);scene.fog.color.copy(scene.background);$('dayNight').textContent=night?'☀️ دن':'🌙 رات'};
+$('rename').onclick=()=>{const v=$('worldName').value.trim();if(v){document.title=v+' — Island Society';toast('دنیا کا نام: '+v);if(syncReady)saveWorldName(v)}};
+$('saveNow').onclick=()=>syncReady?saveAll():toast('Cloud save کے لیے Supabase سیٹ کریں؛ آف لائن ڈیمو اسی براؤزر میں عارضی ہے');
+$('share').onclick=()=>{const u=location.href; if(navigator.share)navigator.share({title:'Island Society',text:'میرے جزیرے پر آؤ!',url:u}).catch(()=>{});else navigator.clipboard?.writeText(u).then(()=>toast('گیم کا لنک کاپی ہوگیا')).catch(()=>toast('اس گیم کو آن لائن ہوسٹنگ پر اپلوڈ کرکے لنک شیئر کریں'))};
+$('skip').onclick=()=>{$('welcome').style.display='none';playerName=$('playerName').value.trim()||'Player';toast('آف لائن ڈیمو شروع ہوگیا')};
+$('start').onclick=async()=>{playerName=$('playerName').value.trim()||'Player';const url=$('supabaseUrl').value.trim(),key=$('supabaseKey').value.trim();$('welcome').style.display='none';if(url&&key){try{await connectCloud(url,key)}catch(e){console.error(e);toast('Supabase کنکشن نہیں ہوا؛ آف لائن موڈ جاری ہے')}}else toast('آف لائن ڈیمو شروع ہوگیا')};
+async function connectCloud(url,key){
+ if(!window.supabase?.createClient)throw Error('Supabase library not loaded');
+ supabase=window.supabase.createClient(url,key);let {data,error}=await supabase.auth.getSession();if(error)throw error;
+ if(!data.session){const sign=await supabase.auth.signInAnonymously();if(sign.error)throw sign.error;user=sign.data.user}else user=data.session.user;
+ // World is a shared public demo island. SQL seeds this UUID.
+ const {data:worldRow,error:worldErr}=await supabase.from('game_worlds').select('id').eq('id',worldId).single();if(worldErr||!worldRow)throw (worldErr||Error('Shared world missing; run supabase.sql first'));
+ await loadObjects();subscribeRealtime();syncReady=true;$('netDot').classList.add('on');$('netText').textContent='Cloud connected';$('syncInfo').textContent='آپ کی تعمیرات Supabase میں محفوظ ہو رہی ہیں۔ دوسرے کھلاڑی اسی دنیا میں آ سکتے ہیں۔';toast('آن لائن دنیا سے کنکشن ہوگیا');updateHud();
+}
+async function loadObjects(){const {data,error}=await supabase.from('game_objects').select('*').eq('world_id',worldId);if(error)throw error;(data||[]).forEach(row=>{if(knownIds.has(row.id))return;knownIds.add(row.id);const o=makeBuilding(row.kind,row.x,row.z,row.id,row.owner_name);objects.push(o)})}
+function subscribeRealtime(){channel=supabase.channel('world-'+worldId).on('postgres_changes',{event:'INSERT',schema:'public',table:'game_objects',filter:'world_id=eq.'+worldId},payload=>{const r=payload.new;if(knownIds.has(r.id))return;knownIds.add(r.id);const o=makeBuilding(r.kind,r.x,r.z,r.id,r.owner_name);objects.push(o);toast((r.owner_name||'کسی کھلاڑی')+' نے نئی تعمیر کی')}).on('postgres_changes',{event:'DELETE',schema:'public',table:'game_objects',filter:'world_id=eq.'+worldId},payload=>{const id=payload.old.id;const o=objects.find(x=>x.userData.id===id);if(o)removeObject(o,false)}).subscribe(status=>{if(status==='SUBSCRIBED'){$('netDot').classList.add('on');$('netText').textContent='Online multiplayer'}})}
+async function persistObject(obj){if(!syncReady)return;const d=obj.userData;const {error}=await supabase.from('game_objects').insert({id:d.id,world_id:worldId,owner_id:user.id,owner_name:playerName,kind:d.kind,x:obj.position.x,z:obj.position.z});if(error){console.error(error);toast('Cloud save ناکام: '+error.message)}else knownIds.add(d.id)}
+async function deleteRemote(id){if(!syncReady)return;const {error}=await supabase.from('game_objects').delete().eq('id',id).eq('owner_id',user.id);if(error)toast('صرف اپنی عمارت ہٹائی جا سکتی ہے')}
+async function saveWorldName(name){const {error}=await supabase.from('game_worlds').update({name}).eq('id',worldId);if(error)toast('نام محفوظ نہیں ہوا')}
+async function saveAll(){toast('تعمیرات realtime میں پہلے ہی محفوظ ہو رہی ہیں')}
+init3D();updateHud();
+})();
+</script>
+</body>
+</html>
