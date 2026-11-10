@@ -72,13 +72,10 @@ input{width:100%;background:#0b1a27;border:1px solid #355268;border-radius:9px;c
 <div class="modal" id="welcome">
   <div class="dialog">
     <h2>🏝️ اپنی سوسائٹی بنائیں</h2>
-    <p>خوش آمدید! یہ 3D جزیرے کا playable prototype ہے۔ آپ ابھی آف لائن تعمیر شروع کر سکتے ہیں۔ Multiplayer اور cloud save کے لیے نیچے Supabase کی معلومات درج کریں۔</p>
+    <p>خوش آمدید! یہ 3D جزیرے کا playable prototype ہے۔ گیم شروع کرنے کے لیے اپنا نام لکھیں۔</p>
     <input id="playerName" placeholder="آپ کا نام (مثلاً Hamid)" maxlength="24">
-    <input id="supabaseUrl" placeholder="Supabase Project URL (اختیاری)">
-    <input id="supabaseKey" placeholder="Supabase anon / publishable key (اختیاری)">
     <button id="start">گیم شروع کریں</button>
-    <button id="skip" style="background:transparent">صرف آف لائن ڈیمو کھیلیں</button>
-    <p style="font-size:10px">اہم: یہاں صرف Supabase کا public anon/publishable key استعمال کریں، service_role key کبھی نہ ڈالیں۔</p>
+    <p style="font-size:10px; margin-top:15px; color:#62e0b2;">کلاؤڈ کنکشن گیم شروع کرنے پر خودکار طور پر ہوگا۔</p>
   </div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -91,6 +88,10 @@ const COST={house:500,villa:1200,tower:2500,shop:900,park:350,road:100};
 const COLORS={house:0xe8b77a,villa:0xf0d6a5,tower:0x8cb9ce,shop:0xd9a16e,park:0x4a9b65,road:0x424d57};
 let scene,camera,renderer,controlsLike={drag:false,lastX:0,lastY:0,pointer:false},raycaster,ground,objects=[],selected='house',deleteMode=false,cash=12000,night=false,angle=0,zoom=35;
 let supabase=null,user=null,worldId='00000000-0000-4000-8000-000000000001',channel=null,knownIds=new Set(),playerName='Player',syncReady=false;
+
+// Supabase project details supplied by the user (public publishable key only).
+const SUPABASE_URL = "https://yenoirjvckxdvmsomwvj.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_6MFpTmrRyAZcKJSlv7OFyw_Lmx0Q4nt";
 const container=$('scene');
 function toast(s){const t=$('toast');t.textContent=s;t.style.display='block';clearTimeout(toast.timer);toast.timer=setTimeout(()=>t.style.display='none',2600)}
 function updateHud(){$('cash').textContent=cash.toLocaleString();$('playerCount').textContent=syncReady?'1+':'1'}
@@ -153,8 +154,12 @@ $('dayNight').onclick=()=>{night=!night;scene.background=new THREE.Color(night?0
 $('rename').onclick=()=>{const v=$('worldName').value.trim();if(v){document.title=v+' — Island Society';toast('دنیا کا نام: '+v);if(syncReady)saveWorldName(v)}};
 $('saveNow').onclick=()=>syncReady?saveAll():toast('Cloud save کے لیے Supabase سیٹ کریں؛ آف لائن ڈیمو اسی براؤزر میں عارضی ہے');
 $('share').onclick=()=>{const u=location.href; if(navigator.share)navigator.share({title:'Island Society',text:'میرے جزیرے پر آؤ!',url:u}).catch(()=>{});else navigator.clipboard?.writeText(u).then(()=>toast('گیم کا لنک کاپی ہوگیا')).catch(()=>toast('اس گیم کو آن لائن ہوسٹنگ پر اپلوڈ کرکے لنک شیئر کریں'))};
-$('skip').onclick=()=>{$('welcome').style.display='none';playerName=$('playerName').value.trim()||'Player';toast('آف لائن ڈیمو شروع ہوگیا')};
-$('start').onclick=async()=>{playerName=$('playerName').value.trim()||'Player';const url=$('supabaseUrl').value.trim(),key=$('supabaseKey').value.trim();$('welcome').style.display='none';if(url&&key){try{await connectCloud(url,key)}catch(e){console.error(e);toast('Supabase کنکشن نہیں ہوا؛ آف لائن موڈ جاری ہے')}}else toast('آف لائن ڈیمو شروع ہوگیا')};
+$('start').onclick=async()=>{
+ playerName=$('playerName').value.trim()||'Player';
+ $('welcome').style.display='none';
+ try{await connectCloud(SUPABASE_URL,SUPABASE_ANON_KEY)}
+ catch(e){console.error(e);$('netText').textContent='Offline demo';$('syncInfo').textContent='Supabase کنکشن نہیں ہوا۔ SQL setup، Anonymous Sign-In اور Realtime settings چیک کریں۔';toast('Supabase کنکشن نہیں ہوا؛ آف لائن موڈ جاری ہے')}
+};
 async function connectCloud(url,key){
  if(!window.supabase?.createClient)throw Error('Supabase library not loaded');
  supabase=window.supabase.createClient(url,key);let {data,error}=await supabase.auth.getSession();if(error)throw error;
